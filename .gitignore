@@ -1,0 +1,15 @@
+.idea/
+.vscode/
+.venv/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build
+/build_android/*
+
+# Specific file
+mainV1.0.4.py
