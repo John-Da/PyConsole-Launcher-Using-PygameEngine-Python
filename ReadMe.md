@@ -4,6 +4,9 @@ A console OS runtime built entirely with Python and Pygame — inspired by the S
 
 Pygame has always been powerful but fragmented. Most projects are distributed as standalone apps with no unified launcher, system UI, or controller-friendly experience. **Pygame Console APP** changes that by wrapping pygame games in a managed, console-style environment.
 
+![Static Badge](https://img.shields.io/badge/python-v3.12.6-blue?logo=python)
+![Static Badge](https://img.shields.io/badge/pygame-v2.6.0-green?logo=pygame)
+
 ---
 
 ## 🧠 Core Concept
@@ -50,8 +53,8 @@ Your Game → Pygame Console Runtime → Hardware
 
 ## 🧰 Built With
 
-- [Python](https://python.org)
-- [Pygame](https://pygame.org)
+- [Python](https://python.org) (v3.12.6)
+- [Pygame](https://pygame.org) (v2.6.0)
 
 ## 📝 Credits
 
