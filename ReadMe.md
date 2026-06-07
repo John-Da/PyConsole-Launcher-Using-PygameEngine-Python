@@ -45,8 +45,18 @@ Your Game → Pygame Console Runtime → Hardware
 
 | A | B | C | D |
 | :-: | :-: | :-: | :-: |
-| Start Up <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/blob/main/demos/startup.png" width="200"/> | GameBoy Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/blob/main/demos/gb-theme.png" width="200"/> | Switch Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/blob/main/demos/switch-theme.png" width="200"/> | Kawaii Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/blob/main/demos/kawaii-theme.png" width="200"/> |
-| 3DS White <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/blob/main/demos/3ds-white-theme.png" width="200"/> | Midnight Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/blob/main/demos/midnigh-theme.png" width="200"/> | Shutdown <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/blob/main/demos/shutdown.png" width="200"/> |  |
+| Start Up <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/startup.png" width="200"/> | GameBoy Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/gb-theme.png" width="200"/> | Switch Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/switch-theme.png" width="200"/> | Kawaii Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/kawaii-theme.png" width="200"/> |
+| 3DS White <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/3ds-white-theme.png" width="200"/> | Midnight Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/midnigh-theme.png" width="200"/> | Shutdown <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/shutdown.png" width="200"/> |  |
+
+## 🧰 Built With
+
+- [Python](https://python.org)
+- [Pygame](https://pygame.org)
+
+## 📝 Credits
+
+- Free Music & SFX — [Pixabay](https://pixabay.com)
+- Sample games — original works by the author
 
 
 
