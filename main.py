@@ -13,10 +13,10 @@ import math
 
 
 from utils.helpers import load_settings, save_settings, handle_navigation, get_stable_directory, get_app_path, \
-    terminate, resource_path
-from utils.input_manager import InputManager
-from utils.ui.components import fade_screen, draw_loading_screen, booting_animation, draw_round_rect, draw_console_btn
-from utils.virtualKeyboard import VirtualKeyboard
+    terminate, resource_path, load_app_metadata
+from services.input_manager import InputManager
+from ui.components import fade_screen, draw_loading_screen, booting_animation, draw_round_rect, draw_console_btn
+from ui.virtual_keyboard import VirtualKeyboard
 
 pygame.init()
 pygame.joystick.init()
@@ -38,22 +38,6 @@ THEMES = [
 ]
 
 
-
-def load_app_metadata(metadata_path):
-    try:
-        with open(metadata_path, "r") as f:
-            metadata = json.load(f)
-
-        name = metadata["name"]
-        version = metadata["version"]
-        author = metadata["author"]
-        description = metadata["description"]
-
-        return name, version, author, description
-
-    except FileNotFoundError:
-        print("metadata.json not found...")
-        return "PyConsole", "v1.0.4", "John", ""
 
 APP_NAME, APP_VERSION, APP_AUTHOR, APP_DESCRIPTION = load_app_metadata("config/metadata.json")
 
@@ -170,7 +154,7 @@ def load_games(path):
     loaded = []
     if not os.path.exists(path): return loaded
     for filename in os.listdir(path):
-        if filename.endswith((".pgame", ".pygame")):
+        if filename.endswith((".pgame", ".pygame", ".pgp", ".pypkg")):
             p = os.path.join(path, filename)
             game_icon = None
             meta = {"title": filename[:-7].replace("_", " "), "author": "Unknown", "version": "1.0", "entry": "main.py"}

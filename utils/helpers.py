@@ -64,6 +64,23 @@ def get_stable_directory():
             return None
 
 
+def load_app_metadata(metadata_path):
+    try:
+        with open(metadata_path, "r") as f:
+            metadata = json.load(f)
+
+        name = metadata["name"]
+        version = metadata["version"]
+        author = metadata["author"]
+        description = metadata["description"]
+
+        return name, version, author, description
+
+    except FileNotFoundError:
+        print("metadata.json not found...")
+        return "PyConsole", "v1.0.4", "John", ""
+
+
 def save_settings(settings_file, LIBRARY_FOLDER, current_theme_idx, view_mode):
     os.makedirs(os.path.dirname(settings_file), exist_ok=True)
 

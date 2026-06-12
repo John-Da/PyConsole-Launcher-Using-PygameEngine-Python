@@ -1,6 +1,6 @@
-import time
+import pygame
 
-class MonitorManager:
+class Monitor:
     def __init__(self):
         self.clock = pygame.time.Clock()
         self.current_fps = 0

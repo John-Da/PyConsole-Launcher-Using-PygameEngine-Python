@@ -1,4 +1,4 @@
-class PowerManager:
+class Power:
     def __init__(self):
         self.battery_level = 100
         self.is_charging = False

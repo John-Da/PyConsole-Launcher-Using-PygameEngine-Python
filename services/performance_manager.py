@@ -1,6 +1,6 @@
 AVAILABLE_GPU = ['OpenGL', 'Vulkan']
 
-class OptimizerManager:
+class PerformanceManager:
     def __init__(self):
         self.render_backend = "OpenGL"
         self.target_fps = 60

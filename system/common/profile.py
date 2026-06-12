@@ -17,7 +17,7 @@ PERFORMANCE_PRESETS = {
     }
 }
 
-class OptionManager:
+class Profile:
     def __init__(self):
         pass
 

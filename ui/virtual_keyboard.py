@@ -1,6 +1,6 @@
 import pygame
 
-from utils.ui.components import draw_round_rect
+from ui.components import draw_round_rect
 
 
 class VirtualKeyboard:
