@@ -12,7 +12,7 @@ from utils.helpers import (
 from services.input_manager import InputManager
 from services.game_manager import GameManager
 
-from themes.system_theme import THEMES
+from services.theme_manager import ThemeManager
 
 from screens.games import GamesScreen
 
@@ -20,6 +20,7 @@ from ui.components import booting_animation
 from ui.virtual_keyboard import VirtualKeyboard
 from ui.footer import Footer
 from ui.navbar import NavBar, TAB_GAMES, TAB_STORE, TAB_SETTINGS, TABS
+from ui.widgets import Widgets
 
 pygame.init()
 pygame.joystick.init()
@@ -67,6 +68,9 @@ font_meta = pygame.font.SysFont("arial", 12, bold=False)
 # ==========================
 # SETUP
 # ==========================
+theme_manager = ThemeManager(resource_path_fn=resource_path)
+theme_manager.set_index(current_theme_idx)
+
 vk = VirtualKeyboard(fontstyle=font_ui)
 input_manager = InputManager(joysticks)
 LIBRARY_FOLDER, current_theme_idx, view_mode = load_settings(
@@ -98,16 +102,21 @@ footer = Footer(
     app_version=APP_VERSION,
 )
 
+widgets = Widgets(font_main, font_ui, font_meta)
+
 # ==========================
 # MAIN LOOP
 # ==========================
 running = True
 while running:
-    theme = THEMES[current_theme_idx]
+    dt = clock.get_time() / 1000.0
+
     W, H = screen.get_size()
     cursor_type = pygame.SYSTEM_CURSOR_ARROW
 
-    dt = clock.get_time() / 1000.0
+    theme_manager.update(dt)
+    theme = theme_manager.current
+
     navbar.update_layout(W)
     games_screen.info_panel.update(dt)
     footer.update_layout(W)
@@ -129,8 +138,8 @@ while running:
                 APP_NAME,
                 booting_music,
                 font_main,
-                THEMES,
-                current_theme_idx,
+                theme_manager.themes,
+                theme_manager.current_index,
                 15,
             )
             boot_played = True
@@ -138,7 +147,9 @@ while running:
         continue
 
     if app_state == STATE_GAME:
-        screen = GameManager.launch_game(screen, clock, font_main, pending_game, theme, APP_NAME)
+        game_manager.select(pending_game)
+        screen = game_manager.launch(screen, clock, font_main, theme, APP_NAME)
+        # print(f"screen after launch: {screen}")
         pending_game = None
         app_state = STATE_SHELL
         continue
@@ -147,49 +158,66 @@ while running:
     # FILTER GAMES
     # =====================
     filtered = game_manager.filter(search_query)
-    screen.fill(theme["bg"])
+    theme.draw_background(screen)
 
     # =====================
     # INPUT HANDLING
     # =====================
-    if vk.active:
-        action = None
-        for a in ["UP", "DOWN", "LEFT", "RIGHT", "ACCEPT"]:
-            if input_manager.actions[a]:
-                action = a
-
-        vk.handle_input(action, m_pos, input_manager.actions["CLICK"])
-        search_query = vk.output
-        if input_manager.actions["BACK"]:
-            vk.active = False
+    if widgets.is_modal_open:
+        if widgets.power_menu_open:
+            choice = widgets.handle_power_input(input_manager.actions)
+            if choice == "Sleep":
+                ...
+            elif choice == "Restart":
+                ...
+            elif choice == "Shutdown":
+                terminate()
+        elif widgets.notification:
+            widgets.handle_notification_input(input_manager.actions)
 
     else:
-        # --- NavBar tab switching (mouse/touch click) ---
-        nav_clicked = False
-        if input_manager.actions["ACCEPT"]:
-            nav_result = navbar.handle_click(m_pos)
-            if "tab" in nav_result:
-                active_tab = nav_result["tab"]
+        if input_manager.actions["POWER_MENU"]:
+            widgets.open_power_menu()
+
+        if vk.active:
+            action = None
+            for a in ["UP", "DOWN", "LEFT", "RIGHT", "ACCEPT"]:
+                if input_manager.actions[a]:
+                    action = a
+
+            vk.handle_input(action, m_pos, input_manager.actions["CLICK"])
+            search_query = vk.output
+            if input_manager.actions["BACK"]:
+                vk.active = False
+
+        else:
+            # --- NavBar tab switching (mouse/touch click) ---
+            nav_clicked = False
+            if input_manager.actions["ACCEPT"]:
+                nav_result = navbar.handle_click(m_pos)
+                if "tab" in nav_result:
+                    active_tab = nav_result["tab"]
+                    games_screen.info_panel.close()
+                    nav_clicked = True
+
+            # --- Tab switching via L/R shoulder buttons ---
+            if input_manager.actions["TAB_LEFT"]:
+                idx = TABS.index(active_tab)
+                active_tab = TABS[(idx - 1) % len(TABS)]
                 games_screen.info_panel.close()
-                nav_clicked = True
 
-        # --- Tab switching via L/R shoulder buttons ---
-        if input_manager.actions["TAB_LEFT"]:
-            idx = TABS.index(active_tab)
-            active_tab = TABS[(idx - 1) % len(TABS)]
-            games_screen.info_panel.close()
+            if input_manager.actions["TAB_RIGHT"]:
+                idx = TABS.index(active_tab)
+                active_tab = TABS[(idx + 1) % len(TABS)]
+                games_screen.info_panel.close()
 
-        if input_manager.actions["TAB_RIGHT"]:
-            idx = TABS.index(active_tab)
-            active_tab = TABS[(idx + 1) % len(TABS)]
-            games_screen.info_panel.close()
-
-        # --- Games tab input ---
-        if active_tab == TAB_GAMES and not nav_clicked:
-            selected = games_screen.handle_input(input_manager.actions, filtered)
-            if selected:
-                pending_game = selected
-                app_state = STATE_GAME
+            # --- Games tab input ---
+            if active_tab == TAB_GAMES and not nav_clicked:
+                selected = games_screen.handle_input(input_manager.actions, filtered)
+                if selected:
+                    # print(f"Selected game: {selected}")
+                    pending_game = selected
+                    app_state = STATE_GAME
 
     # =====================
     # DRAW: TAB CONTENT
@@ -213,6 +241,9 @@ while running:
     # =====================
     navbar.draw(screen, theme, active_tab=active_tab, m_pos=m_pos, dt=dt)
     footer.draw(screen, theme)
+
+    widgets.draw_power_menu(screen, theme)
+    widgets.draw_notification(screen, theme)
 
     pygame.display.flip()
     clock.tick(60)

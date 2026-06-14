@@ -33,6 +33,7 @@ class InputManager:
             "MOUSE_POS": (0, 0),
             "CLICK": False,
             "ANY_KEY": None,
+            "POWER_MENU": False,
         }
         self.joy_delay = 0
         self.joysticks = joysticks
@@ -50,6 +51,7 @@ class InputManager:
             "TAB_LEFT",
             "TAB_RIGHT",
             "CLICK",
+            "POWER_MENU"
         ]:
             self.actions[k] = False
         self.actions["SCROLL"] = 0
@@ -116,17 +118,22 @@ class InputManager:
 
             # CONTROLLER
             if event.type == pygame.JOYBUTTONDOWN:
+                
+                # print(f"Button pressed: {event.button}")
+
                 self.last_input = "controller"
                 if event.button == 0:
                     self.actions["ACCEPT"] = True
                 if event.button == 1:
                     self.actions["BACK"] = True
-                if event.button == 3:
+                if event.button == 2:
                     self.actions["DETAIL"] = True
-                if event.button == 4:
+                if event.button == 9:
                     self.actions["TAB_LEFT"] = True
-                if event.button == 5:
+                if event.button == 10:
                     self.actions["TAB_RIGHT"] = True
+                if event.button == 6:
+                    self.actions["POWER_MENU"] = True
 
             if event.type == pygame.JOYDEVICEADDED:
                 joy = pygame.joystick.Joystick(event.device_index)

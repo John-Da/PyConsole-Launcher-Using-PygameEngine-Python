@@ -93,7 +93,10 @@ class GameManager:
 
     def launch(self, screen, clock, font, theme, app_name) -> pygame.Surface:
         if not self.pending_game:
+            print("No pending game!")
             return screen
+
+        # print(f"Launching: {self.pending_game['path']}")
 
         W, H = screen.get_size()
         fade_screen(screen, W, H, direction="in", speed=10)
@@ -113,6 +116,7 @@ class GameManager:
         try:
             with zipfile.ZipFile(self.pending_game["path"], "r") as z:
                 z.extractall(temp_dir)
+            # print(f"Extracted to {temp_dir}: {os.listdir(temp_dir)}")
 
             target_entry = self.pending_game.get("entry", "main.py")
             script_path = None
@@ -122,11 +126,13 @@ class GameManager:
                     sys.path.insert(0, root)
                     os.chdir(root)
                     break
+            # print(f"script_path = {script_path}")
 
             if script_path:
                 spec = importlib.util.spec_from_file_location("game_run", script_path)
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
+                # print(f"Module loaded. Has Game? {hasattr(module, 'Game')}, has create_game? {hasattr(module, 'create_game')}")
 
                 if hasattr(module, "Game"):
                     module.Game(screen).run()
@@ -135,6 +141,8 @@ class GameManager:
 
         except Exception as e:
             print(f"Game Crash: {e}")
+            import traceback
+            traceback.print_exc()
 
         finally:
             try:
@@ -143,24 +151,20 @@ class GameManager:
             except Exception:
                 pass
 
-            fade_screen(screen, W, H, direction="out", speed=10)
-            draw_loading_screen(
-                screen, clock, font, theme, f"RETURNING TO {app_name.upper()}..."
-            )
-
-            os.chdir(original_cwd)
-            sys.path = original_path
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-            pygame.display.quit()
-            pygame.display.init()
-            pygame.font.init()
+            if not pygame.display.get_init():
+                pygame.display.init()
+            if not pygame.font.get_init():
+                pygame.font.init()
 
             screen = pygame.display.set_mode((W, H), pygame.SCALED)
             pygame.display.set_caption(app_name)
             pygame.event.clear()
+
+            fade_screen(screen, W, H, direction="out", speed=10)
+            draw_loading_screen(
+                screen, clock, font, theme, f"RETURNING TO {app_name.upper()}..."
+            )
             screen.fill(theme["bg"])
             pygame.display.flip()
 
-        self.pending_game = None
         return screen
