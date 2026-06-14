@@ -16,11 +16,12 @@ from services.theme_manager import ThemeManager
 
 from screens.games import GamesScreen
 
-from ui.components import booting_animation
+from ui.components import booting_animation, shutdown_animation
 from ui.virtual_keyboard import VirtualKeyboard
 from ui.footer import Footer
 from ui.navbar import NavBar, TAB_GAMES, TAB_STORE, TAB_SETTINGS, TABS
 from ui.widgets import Widgets
+from ui.logo import AnimatedLogo
 
 pygame.init()
 pygame.joystick.init()
@@ -71,6 +72,12 @@ font_meta = pygame.font.SysFont("arial", 12, bold=False)
 theme_manager = ThemeManager(resource_path_fn=resource_path)
 theme_manager.set_index(current_theme_idx)
 
+splash_logo = AnimatedLogo(
+    resource_path("assets", "images", "logo_frames"),
+    max_height=40,
+    frame_duration=0.1,
+)
+
 vk = VirtualKeyboard(fontstyle=font_ui)
 input_manager = InputManager(joysticks)
 LIBRARY_FOLDER, current_theme_idx, view_mode = load_settings(
@@ -78,7 +85,7 @@ LIBRARY_FOLDER, current_theme_idx, view_mode = load_settings(
 )
 game_manager = GameManager(LIBRARY_FOLDER)
 booting_music = resource_path("assets", "sounds", "startup.wav")
-closing_music = resource_path("assets", "sounds", "closing.wav")
+closing_music = resource_path("assets", "sounds", "error.wav")
 boot_played = False
 
 cursor_type = pygame.SYSTEM_CURSOR_ARROW
@@ -123,6 +130,15 @@ while running:
 
     result = input_manager.process_events(W, H)
     if result == "QUIT":
+        shutdown_animation(
+            screen,
+            clock,
+            APP_NAME,
+            closing_music,
+            font_main,
+            theme,
+            shutdown_logo=splash_logo,
+        )
         terminate()
 
     m_pos = input_manager.actions["MOUSE_POS"]
@@ -141,6 +157,7 @@ while running:
                 theme_manager.themes,
                 theme_manager.current_index,
                 15,
+                boot_logo=splash_logo,
             )
             boot_played = True
         app_state = STATE_SHELL
@@ -171,6 +188,15 @@ while running:
             elif choice == "Restart":
                 ...
             elif choice == "Shutdown":
+                shutdown_animation(
+                    screen,
+                    clock,
+                    APP_NAME,
+                    closing_music,
+                    font_main,
+                    theme,
+                    shutdown_logo=splash_logo,
+                )
                 terminate()
         elif widgets.notification:
             widgets.handle_notification_input(input_manager.actions)
