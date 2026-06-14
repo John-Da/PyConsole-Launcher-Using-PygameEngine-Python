@@ -10,16 +10,16 @@ from utils.helpers import (
     load_app_metadata,
 )
 from services.input_manager import InputManager
-from services.game_launcher import load_games, launch_game
+from services.game_manager import GameManager
 
 from themes.system_theme import THEMES
+
+from screens.games import GamesScreen
 
 from ui.components import booting_animation
 from ui.virtual_keyboard import VirtualKeyboard
 from ui.footer import Footer
 from ui.navbar import NavBar, TAB_GAMES, TAB_STORE, TAB_SETTINGS, TABS
-from ui.carousel import Carousel
-from ui.info_panel import InfoPanel
 
 pygame.init()
 pygame.joystick.init()
@@ -51,7 +51,7 @@ STATE_GAME = "game"
 app_state = STATE_BOOT
 pending_game = None
 current_theme_idx = 0
-view_mode = "grid"  # kept for save_settings() compatibility; carousel ignores it
+view_mode = "grid"
 active_tab = TAB_GAMES
 
 search_query = ""
@@ -64,7 +64,6 @@ font_badge = pygame.font.SysFont("arial", 14, bold=True)
 font_ver = pygame.font.SysFont("arial", 14, bold=False)
 font_meta = pygame.font.SysFont("arial", 12, bold=False)
 
-
 # ==========================
 # SETUP
 # ==========================
@@ -73,22 +72,25 @@ input_manager = InputManager(joysticks)
 LIBRARY_FOLDER, current_theme_idx, view_mode = load_settings(
     SETTINGS_FILE, LIBRARY_FOLDER, current_theme_idx, view_mode
 )
-games = load_games(LIBRARY_FOLDER)
+game_manager = GameManager(LIBRARY_FOLDER)
 booting_music = resource_path("assets", "sounds", "startup.wav")
 closing_music = resource_path("assets", "sounds", "closing.wav")
 boot_played = False
 
 cursor_type = pygame.SYSTEM_CURSOR_ARROW
 
+font_icon = pygame.font.Font(
+    resource_path("assets", "fonts", "MaterialIcons-Regular.ttf"), NavBar.ICON_SIZE
+)
 navbar = NavBar(
     font_tab=font_ui,
     font_status=font_meta,
+    font_icon=font_icon,
     logo_path=resource_path("assets", "images", "logo_frames"),
     frame_duration=0.1,
 )
 
-carousel = Carousel(font_title=font_main, font_meta=font_meta)
-info_panel = InfoPanel(font_title=font_main, font_label=font_ui, font_body=font_meta)
+games_screen = GamesScreen(font_main, font_meta, font_ui)
 
 footer = Footer(
     font_badge=font_badge,
@@ -107,7 +109,7 @@ while running:
 
     dt = clock.get_time() / 1000.0
     navbar.update_layout(W)
-    info_panel.update(dt)
+    games_screen.info_panel.update(dt)
     footer.update_layout(W)
 
     result = input_manager.process_events(W, H)
@@ -136,7 +138,7 @@ while running:
         continue
 
     if app_state == STATE_GAME:
-        screen = launch_game(screen, clock, font_main, pending_game, theme, APP_NAME)
+        screen = GameManager.launch_game(screen, clock, font_main, pending_game, theme, APP_NAME)
         pending_game = None
         app_state = STATE_SHELL
         continue
@@ -144,12 +146,8 @@ while running:
     # =====================
     # FILTER GAMES
     # =====================
-    filtered = [g for g in games if search_query.lower() in g["name"].lower()]
+    filtered = game_manager.filter(search_query)
     screen.fill(theme["bg"])
-
-    # Keep carousel selection valid if the filtered list shrinks/grows
-    if carousel.selected >= len(filtered):
-        carousel.set_selected(max(0, len(filtered) - 1), len(filtered))
 
     # =====================
     # INPUT HANDLING
@@ -167,45 +165,31 @@ while running:
 
     else:
         # --- NavBar tab switching (mouse/touch click) ---
+        nav_clicked = False
         if input_manager.actions["ACCEPT"]:
             nav_result = navbar.handle_click(m_pos)
             if "tab" in nav_result:
                 active_tab = nav_result["tab"]
-                info_panel.close()
+                games_screen.info_panel.close()
+                nav_clicked = True
 
-        # --- Tab switching via L/R shoulder buttons (any tab) ---
+        # --- Tab switching via L/R shoulder buttons ---
         if input_manager.actions["TAB_LEFT"]:
             idx = TABS.index(active_tab)
             active_tab = TABS[(idx - 1) % len(TABS)]
-            info_panel.close()
+            games_screen.info_panel.close()
 
         if input_manager.actions["TAB_RIGHT"]:
             idx = TABS.index(active_tab)
             active_tab = TABS[(idx + 1) % len(TABS)]
-            info_panel.close()
+            games_screen.info_panel.close()
 
-        # --- Games tab: carousel navigation ---
-        if active_tab == TAB_GAMES:
-            if input_manager.actions["LEFT"]:
-                carousel.move_left(len(filtered))
-                info_panel.close()
-            if input_manager.actions["RIGHT"]:
-                carousel.move_right(len(filtered))
-                info_panel.close()
-
-            if input_manager.actions["ACCEPT"]:
-                game = carousel.get_selected_game(filtered)
-                if game:
-                    pending_game = game
-                    app_state = STATE_GAME
-
-            if input_manager.actions["DETAIL"]:
-                game = carousel.get_selected_game(filtered)
-                if game:
-                    info_panel.toggle(game)
-
-        if input_manager.actions["BACK"] and info_panel.is_open:
-            info_panel.close()
+        # --- Games tab input ---
+        if active_tab == TAB_GAMES and not nav_clicked:
+            selected = games_screen.handle_input(input_manager.actions, filtered)
+            if selected:
+                pending_game = selected
+                app_state = STATE_GAME
 
     # =====================
     # DRAW: TAB CONTENT
@@ -213,8 +197,8 @@ while running:
     content_rect = pygame.Rect(0, NavBar.HEIGHT, W, H - NavBar.HEIGHT - Footer.HEIGHT)
 
     if active_tab == TAB_GAMES:
-        carousel.update(dt)
-        carousel.draw(screen, theme, filtered, content_rect)
+        games_screen.update(dt, filtered)
+        games_screen.draw(screen, theme, filtered, content_rect, Footer.HEIGHT)
 
     elif active_tab == TAB_STORE:
         placeholder = font_main.render("Store — coming soon", True, theme["text"])
@@ -228,7 +212,6 @@ while running:
     # DRAW: NAVBAR + FOOTER
     # =====================
     navbar.draw(screen, theme, active_tab=active_tab, m_pos=m_pos, dt=dt)
-    info_panel.draw(screen, theme, footer_height=Footer.HEIGHT)
     footer.draw(screen, theme)
 
     pygame.display.flip()
