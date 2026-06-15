@@ -1,3 +1,6 @@
+<img width="2760" height="1160" alt="pyconsole_logo" src="https://github.com/user-attachments/assets/f5e122ec-4f28-4ea4-84b9-95f6140116f8" />
+
+
 # 🕹️ Pygame Console APP
 
 A console OS runtime built entirely with Python and Pygame — inspired by the Steam Deck, PSP/PS Vita, and classic retro consoles.
