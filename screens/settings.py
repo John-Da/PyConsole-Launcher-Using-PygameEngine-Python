@@ -1,5 +1,6 @@
 import pygame
-from ui.components import draw_round_rect, clear_rect_cache
+from ui.components import draw_round_rect
+from utils.helpers import get_stable_directory
 
 
 class SettingsItem:
@@ -72,7 +73,6 @@ class SettingsScreen:
     # ------------------------------------------------------------
     def _cycle_theme(self):
         self.theme_manager.next()
-        clear_rect_cache()
         if self.on_settings_changed:
             self.on_settings_changed()
 
@@ -83,7 +83,6 @@ class SettingsScreen:
 
     def _cycle_render_quality(self):
         self.system.profile.cycle_render_quality()
-        clear_rect_cache()
         if self.on_settings_changed:
             self.on_settings_changed()
 
@@ -116,6 +115,26 @@ class SettingsScreen:
             self._power_menu_requested = False
             return True
         return False
+
+    def finish_library_path_edit(self):
+        if self._editing_library_path:
+            self._editing_library_path = False
+            new_path = self.vk.output.strip()
+            if new_path and new_path != self.library_folder:
+                self.library_folder = new_path
+                if self.on_library_path_change:
+                    self.on_library_path_change(new_path)
+                if self.on_settings_changed:
+                    self.on_settings_changed()
+
+    def _edit_library_path(self):
+        new_path = get_stable_directory()
+        if new_path:
+            self.library_folder = new_path
+            if self.on_library_path_change:
+                self.on_library_path_change(new_path)
+            if self.on_settings_changed:
+                self.on_settings_changed()
 
     def update(self, dt):
         pass

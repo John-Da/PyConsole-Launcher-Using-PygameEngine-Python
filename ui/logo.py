@@ -3,20 +3,48 @@ import pygame
 
 
 class AnimatedLogo:
-    def __init__(self, path: str | None, max_height: int, frame_duration: float = 0.1):
+    @staticmethod
+    def load_raw_frames(folder: str, max_frames: int | None = None) -> list[pygame.Surface]:
+        valid_ext = (".png", ".jpg", ".jpeg", ".bmp")
+        frames = []
+        try:
+            filenames = sorted(
+                f for f in os.listdir(folder) if f.lower().endswith(valid_ext)
+            )
+        except Exception:
+            return frames
+
+        if max_frames and len(filenames) > max_frames:
+            step = len(filenames) / max_frames
+            filenames = [filenames[int(i * step)] for i in range(max_frames)]
+
+        for fname in filenames:
+            try:
+                frames.append(pygame.image.load(os.path.join(folder, fname)).convert_alpha())
+            except Exception as e:
+                print(f"[AnimatedLogo] Skipping frame '{fname}': {e}")
+        return frames
+
+    def __init__(
+        self,
+        raw_frames: list[pygame.Surface] | None = None,
+        path: str | None = None,
+        max_height: int = 40,
+        frame_duration: float = 0.1,
+    ):
         self.max_height = max_height
         self.frame_duration = max(frame_duration, 0.01)
-        self.frames: list[pygame.Surface] = []
+        self.frames = []
         self.frame_idx = 0
         self.elapsed = 0.0
 
-        if path and os.path.exists(path):
+        if raw_frames is not None:
+            self.frames = [self._scale(f) for f in raw_frames]
+        elif path and os.path.exists(path):
             if os.path.isdir(path):
                 self._load_folder(path)
             else:
                 self._load_single(path)
-        else:
-            print(f"[AnimatedLogo] Logo path not found or None: {path!r}")
 
     def _scale(self, surf: pygame.Surface) -> pygame.Surface:
         scale = self.max_height / surf.get_height()

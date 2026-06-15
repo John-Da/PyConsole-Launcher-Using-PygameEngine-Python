@@ -26,8 +26,20 @@ from ui.navbar import NavBar, TAB_GAMES, TAB_STORE, TAB_SETTINGS, TABS
 from ui.widgets import Widgets
 from ui.logo import AnimatedLogo
 
+
+import time
+
+_t_start = time.time()
+
+
+def _checkpoint(label):
+    elapsed = time.time() - _t_start
+    print(f"[STARTUP] {label}: {elapsed:.3f}s")
+
+
 pygame.init()
 pygame.joystick.init()
+_checkpoint("pygame.init")
 
 # ==========================
 # CONSOLE CONFIG
@@ -47,10 +59,15 @@ for i in range(pygame.joystick.get_count()):
     joy.init()
     joysticks[joy.get_instance_id()] = joy
 
+_checkpoint("config + joysticks")
+
+
 WIDTH, HEIGHT = 800, 480
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED | pygame.FULLSCREEN)
 pygame.display.set_caption(f"{APP_NAME} {APP_VERSION}")
 clock = pygame.time.Clock()
+
+_checkpoint("display init")
 
 # Paths
 APP_DATA_DIR, LIBRARY_FOLDER = get_app_path()
@@ -82,20 +99,28 @@ font_meta = pygame.font.SysFont("arial", 12, bold=False)
 # ==========================
 theme_manager = ThemeManager(resource_path_fn=resource_path)
 theme_manager.set_index(current_theme_idx)
+_checkpoint("ThemeManager")
+
+_raw_logo_frames = AnimatedLogo.load_raw_frames(
+    resource_path("assets", "images", "logo_frames"),
+    max_frames=20,
+)
 
 splash_logo = AnimatedLogo(
-    resource_path("assets", "images", "logo_frames"),
-    max_height=40,
-    frame_duration=0.1,
+    raw_frames=_raw_logo_frames, max_height=40, frame_duration=0.6
 )
+_checkpoint("splash_logo")
+
 
 vk = VirtualKeyboard(fontstyle=font_ui)
 input_manager = InputManager(joysticks)
+_checkpoint("vk + input_manager")
 
 # Load saved settings (library path, theme index, view mode, profile, render quality)
 LIBRARY_FOLDER, current_theme_idx, view_mode, perf_profile, render_quality = (
     load_settings(SETTINGS_FILE, LIBRARY_FOLDER, current_theme_idx, view_mode)
 )
+_checkpoint("load_settings")
 
 # Apply theme index loaded from settings (theme_manager was created above with default index 0)
 theme_manager.set_index(current_theme_idx)
@@ -103,8 +128,12 @@ theme_manager.set_index(current_theme_idx)
 system_manager = SystemManager(os_version=APP_VERSION)
 system_manager.profile.set_profile(perf_profile)
 system_manager.profile.render_quality = render_quality
+_checkpoint("SystemManager")
+
 
 game_manager = GameManager(LIBRARY_FOLDER)
+_checkpoint("GameManager (game scan)")
+
 booting_music = resource_path("assets", "sounds", "startup.wav")
 closing_music = resource_path("assets", "sounds", "error.wav")
 boot_played = False
@@ -118,12 +147,21 @@ navbar = NavBar(
     font_tab=font_ui,
     font_status=font_meta,
     font_icon=font_icon,
-    logo_path=resource_path("assets", "images", "logo_frames"),
+    logo_path=_raw_logo_frames,
     frame_duration=0.1,
 )
+_checkpoint("NavBar")
 
 games_screen = GamesScreen(font_main, font_meta, font_ui)
+_checkpoint("GamesScreen")
 
+footer = Footer(
+    font_badge=font_badge,
+    font_label=font_ui,
+    app_version=APP_VERSION,
+)
+
+widgets = Widgets(font_main, font_ui, font_meta)
 
 def persist_settings():
     save_settings(
@@ -147,15 +185,10 @@ settings_screen = SettingsScreen(
     on_library_path_change=lambda new_path: game_manager.set_library_folder(new_path),
     on_settings_changed=persist_settings,
 )
+_checkpoint("SettingsScreen")
 
-footer = Footer(
-    font_badge=font_badge,
-    font_label=font_ui,
-    app_version=APP_VERSION,
-)
 
-widgets = Widgets(font_main, font_ui, font_meta)
-
+_checkpoint("setup complete")
 # ==========================
 # MAIN LOOP
 # ==========================
