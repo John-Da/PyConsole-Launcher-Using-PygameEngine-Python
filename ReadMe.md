@@ -49,14 +49,13 @@ Your Game → Pygame Console Runtime → Hardware
 
 ## 📸 Screenshots
 
-| A | B | C | D |
-| :-: | :-: | :-: | :-: |
-| Start Up <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/startup.png" width="200"/> | GameBoy Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/gb-theme.png" width="200"/> | Switch Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/switch-theme.png" width="200"/> | Kawaii Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/kawaii-theme.png" width="200"/> |
-| 3DS White <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/3ds-white-theme.png" width="200"/> | Midnight Theme <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/midnigh-theme.png" width="200"/> | Shutdown <img src="https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/raw/main/demos/shutdown.png" width="200"/> |  |
+| Startup | Games | Game Info | Store |
+| :---: | :---: | :---: | :---: |
+| <img src="https://github.com/user-attachments/assets/deb66d95-c9f8-49e7-8e55-1c0d76c9fffe" width="200"> | <img src="https://github.com/user-attachments/assets/aa1157be-9b25-47fc-a89b-09d6044447ec" width="200"> | <img src="https://github.com/user-attachments/assets/bad8015f-5809-4595-8f94-f924dbf3dc3f" width="200"> | <img src="https://github.com/user-attachments/assets/9612ba7c-cec1-4abd-9c68-9ec9e24fd825" width="200"> |
 
-
-https://github.com/user-attachments/assets/eaebc412-ea0c-4849-ba60-136d7c23a293
-
+| Settings | Power Options | Shutdown |
+| :---: | :---: | :---: |
+| <img src="https://github.com/user-attachments/assets/10d575e0-2f33-48c7-bd07-fba94c1c06ea" width="200"> | <img src="https://github.com/user-attachments/assets/21504f22-7bd4-4d2e-b206-11e89dd0bb18" width="200"> | <img src="https://github.com/user-attachments/assets/84c22510-6ddc-4bca-be02-37e8a517fb99" width="200"> |
 
 ## 🧰 Built With
 
