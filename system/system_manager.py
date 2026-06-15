@@ -1,16 +1,15 @@
-from system.common.monitor import MonitorManager
-from services.performance_manager import PerformanceManager
+from system.common.monitor import Monitor
 from system.common.power import Power
 from system.common.profile import Profile
 
 
 class SystemManager:
-    def __init__(self):
-        self.monitor = MonitorManager()
+    def __init__(self, os_version="0.1.0"):
+        self.monitor = Monitor()
         self.power = Power()
-        self.performance = PerformanceManager()
-        self.options = Profile()
+        self.profile = Profile("Balanced")
+        self.os_version = os_version
 
     def update(self):
         self.monitor.update()
-        self.performance.apply_profile()
+        self.power.update()

@@ -81,20 +81,35 @@ def load_app_metadata(metadata_path):
         return "PyConsole", "v1.0.4", "John", ""
 
 
-def save_settings(settings_file, LIBRARY_FOLDER, current_theme_idx, view_mode):
+def save_settings(
+    settings_file,
+    LIBRARY_FOLDER,
+    current_theme_idx,
+    view_mode,
+    performance_profile="Balanced",
+    render_quality="medium",
+):
     os.makedirs(os.path.dirname(settings_file), exist_ok=True)
 
     config = {
         "library_path": LIBRARY_FOLDER,
         "theme_index": current_theme_idx,
-        "view_mode": view_mode
+        "view_mode": view_mode,
+        "performance_profile": performance_profile,
+        "render_quality": render_quality,
     }
     with open(settings_file, "w") as f:
         json.dump(config, f, indent=4)
 
 
-
-def load_settings(settings_file, LIBRARY_FOLDER, current_theme_idx, view_mode):
+def load_settings(
+    settings_file,
+    LIBRARY_FOLDER,
+    current_theme_idx,
+    view_mode,
+    performance_profile="Balanced",
+    render_quality="medium",
+):
     if os.path.exists(settings_file):
         try:
             with open(settings_file, "r") as f:
@@ -103,11 +118,19 @@ def load_settings(settings_file, LIBRARY_FOLDER, current_theme_idx, view_mode):
             LIBRARY_FOLDER = config.get("library_path", LIBRARY_FOLDER)
             current_theme_idx = config.get("theme_index", current_theme_idx)
             view_mode = config.get("view_mode", view_mode)
+            performance_profile = config.get("performance_profile", performance_profile)
+            render_quality = config.get("render_quality", render_quality)
 
         except:
             print("Settings file corrupted, using defaults.")
 
-    return LIBRARY_FOLDER, current_theme_idx, view_mode
+    return (
+        LIBRARY_FOLDER,
+        current_theme_idx,
+        view_mode,
+        performance_profile,
+        render_quality,
+    )
 
 
 def handle_navigation(focus_mode, button_selected, selected, action, cols, total_games):
@@ -145,4 +168,3 @@ def handle_navigation(focus_mode, button_selected, selected, action, cols, total
             selected = min(total_games - 1, selected + 1)
 
     return focus_mode, button_selected, selected
-

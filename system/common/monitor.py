@@ -1,5 +1,6 @@
 import pygame
 
+
 class Monitor:
     def __init__(self):
         self.clock = pygame.time.Clock()
