@@ -9,12 +9,15 @@ from utils.helpers import (
     resource_path,
     load_app_metadata,
 )
+
+from system.system_manager import SystemManager
+
 from services.input_manager import InputManager
 from services.game_manager import GameManager
-
 from services.theme_manager import ThemeManager
 
 from screens.games import GamesScreen
+from screens.settings import SettingsScreen
 
 from ui.components import booting_animation, shutdown_animation
 from ui.virtual_keyboard import VirtualKeyboard
@@ -36,8 +39,16 @@ APP_NAME, APP_VERSION, APP_AUTHOR, APP_DESCRIPTION = load_app_metadata(
 
 joysticks = {}
 
+# Populate already-connected controllers immediately.
+# JOYDEVICEADDED events for pre-connected devices can be
+# consumed/lost by pygame.event.get() calls during boot animation.
+for i in range(pygame.joystick.get_count()):
+    joy = pygame.joystick.Joystick(i)
+    joy.init()
+    joysticks[joy.get_instance_id()] = joy
+
 WIDTH, HEIGHT = 800, 480
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED)
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED | pygame.FULLSCREEN)
 pygame.display.set_caption(f"{APP_NAME} {APP_VERSION}")
 clock = pygame.time.Clock()
 
@@ -80,9 +91,19 @@ splash_logo = AnimatedLogo(
 
 vk = VirtualKeyboard(fontstyle=font_ui)
 input_manager = InputManager(joysticks)
-LIBRARY_FOLDER, current_theme_idx, view_mode = load_settings(
-    SETTINGS_FILE, LIBRARY_FOLDER, current_theme_idx, view_mode
+
+# Load saved settings (library path, theme index, view mode, profile, render quality)
+LIBRARY_FOLDER, current_theme_idx, view_mode, perf_profile, render_quality = (
+    load_settings(SETTINGS_FILE, LIBRARY_FOLDER, current_theme_idx, view_mode)
 )
+
+# Apply theme index loaded from settings (theme_manager was created above with default index 0)
+theme_manager.set_index(current_theme_idx)
+
+system_manager = SystemManager(os_version=APP_VERSION)
+system_manager.profile.set_profile(perf_profile)
+system_manager.profile.render_quality = render_quality
+
 game_manager = GameManager(LIBRARY_FOLDER)
 booting_music = resource_path("assets", "sounds", "startup.wav")
 closing_music = resource_path("assets", "sounds", "error.wav")
@@ -103,6 +124,30 @@ navbar = NavBar(
 
 games_screen = GamesScreen(font_main, font_meta, font_ui)
 
+
+def persist_settings():
+    save_settings(
+        SETTINGS_FILE,
+        settings_screen.library_folder,
+        theme_manager.current_index,
+        view_mode,
+        performance_profile=system_manager.profile.name,
+        render_quality=system_manager.profile.render_quality,
+    )
+
+
+settings_screen = SettingsScreen(
+    font_main,
+    font_meta,
+    font_ui,
+    system_manager,
+    theme_manager,
+    library_folder=LIBRARY_FOLDER,
+    vk=vk,
+    on_library_path_change=lambda new_path: game_manager.set_library_folder(new_path),
+    on_settings_changed=persist_settings,
+)
+
 footer = Footer(
     font_badge=font_badge,
     font_label=font_ui,
@@ -116,32 +161,9 @@ widgets = Widgets(font_main, font_ui, font_meta)
 # ==========================
 running = True
 while running:
-    dt = clock.get_time() / 1000.0
 
     W, H = screen.get_size()
     cursor_type = pygame.SYSTEM_CURSOR_ARROW
-
-    theme_manager.update(dt)
-    theme = theme_manager.current
-
-    navbar.update_layout(W)
-    games_screen.info_panel.update(dt)
-    footer.update_layout(W)
-
-    result = input_manager.process_events(W, H)
-    if result == "QUIT":
-        shutdown_animation(
-            screen,
-            clock,
-            APP_NAME,
-            closing_music,
-            font_main,
-            theme,
-            shutdown_logo=splash_logo,
-        )
-        terminate()
-
-    m_pos = input_manager.actions["MOUSE_POS"]
 
     # =====================
     # STATE ROUTER
@@ -161,7 +183,36 @@ while running:
             )
             boot_played = True
         app_state = STATE_SHELL
+        clock.tick(60)
         continue
+
+    dt = clock.get_time() / 1000.0
+    theme_manager.update(dt)
+    theme = theme_manager.current
+
+    navbar.update_layout(W)
+    games_screen.info_panel.update(dt)
+    system_manager.update()
+    footer.update_layout(W)
+
+    result = input_manager.process_events(W, H)
+    if result == "QUIT":
+        shutdown_animation(
+            screen,
+            clock,
+            APP_NAME,
+            closing_music,
+            font_main,
+            theme,
+            shutdown_logo=splash_logo,
+        )
+        terminate()
+
+    m_pos = input_manager.actions["MOUSE_POS"]
+
+    # DEBUG: uncomment to confirm whether input is reaching this point
+    # print("actions:", input_manager.actions, "| vk.active:", vk.active,
+    #       "| modal_open:", widgets.is_modal_open)
 
     if app_state == STATE_GAME:
         game_manager.select(pending_game)
@@ -180,6 +231,8 @@ while running:
     # =====================
     # INPUT HANDLING
     # =====================
+    nav_clicked = False
+
     if widgets.is_modal_open:
         if widgets.power_menu_open:
             choice = widgets.handle_power_input(input_manager.actions)
@@ -212,18 +265,24 @@ while running:
                     action = a
 
             vk.handle_input(action, m_pos, input_manager.actions["CLICK"])
-            search_query = vk.output
+
+            if getattr(settings_screen, "_editing_library_path", False):
+                pass  # vk.output is the path, don't touch search_query
+            else:
+                search_query = vk.output
+
             if input_manager.actions["BACK"]:
                 vk.active = False
+                settings_screen.finish_library_path_edit()
 
         else:
             # --- NavBar tab switching (mouse/touch click) ---
-            nav_clicked = False
             if input_manager.actions["ACCEPT"]:
                 nav_result = navbar.handle_click(m_pos)
                 if "tab" in nav_result:
                     active_tab = nav_result["tab"]
                     games_screen.info_panel.close()
+                    settings_screen.reset()
                     nav_clicked = True
 
             # --- Tab switching via L/R shoulder buttons ---
@@ -231,11 +290,13 @@ while running:
                 idx = TABS.index(active_tab)
                 active_tab = TABS[(idx - 1) % len(TABS)]
                 games_screen.info_panel.close()
+                settings_screen.reset()
 
             if input_manager.actions["TAB_RIGHT"]:
                 idx = TABS.index(active_tab)
                 active_tab = TABS[(idx + 1) % len(TABS)]
                 games_screen.info_panel.close()
+                settings_screen.reset()
 
             # --- Games tab input ---
             if active_tab == TAB_GAMES and not nav_clicked:
@@ -259,8 +320,13 @@ while running:
         screen.blit(placeholder, placeholder.get_rect(center=content_rect.center))
 
     elif active_tab == TAB_SETTINGS:
-        placeholder = font_main.render("Settings — coming soon", True, theme["text"])
-        screen.blit(placeholder, placeholder.get_rect(center=content_rect.center))
+        if not nav_clicked:
+            settings_screen.handle_input(input_manager.actions)
+        settings_screen.update(dt)
+        settings_screen.draw(screen, theme, content_rect, Footer.HEIGHT)
+
+        if settings_screen.consume_power_menu_request():
+            widgets.open_power_menu()
 
     # =====================
     # DRAW: NAVBAR + FOOTER

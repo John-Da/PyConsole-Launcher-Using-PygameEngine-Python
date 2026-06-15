@@ -80,6 +80,10 @@ class GameManager:
     def filter(self, query: str) -> list[dict]:
         return [g for g in self.games if query.lower() in g["name"].lower()]
 
+    def set_library_folder(self, folder):
+        self.library_folder = folder
+        self.games = self._load_games()
+
     # ------------------------------------------------------------------
     # Launching
     # ------------------------------------------------------------------
@@ -156,7 +160,7 @@ class GameManager:
             if not pygame.font.get_init():
                 pygame.font.init()
 
-            screen = pygame.display.set_mode((W, H), pygame.SCALED)
+            screen = pygame.display.set_mode((W, H), pygame.SCALED | pygame.FULLSCREEN)
             pygame.display.set_caption(app_name)
             pygame.event.clear()
 

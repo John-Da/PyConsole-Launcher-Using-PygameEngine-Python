@@ -121,3 +121,7 @@ class ThemeManager:
 
     def names(self):
         return [t.name for t in self.themes]
+    
+    @property
+    def current_name(self) -> str:
+        return self.current.name

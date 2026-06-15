@@ -24,6 +24,9 @@ class GamesScreen:
 
         # Returns selected game if ACCEPT pressed, else None
         if actions["ACCEPT"]:
+            if self.info_panel.is_open:
+                self.info_panel.close()
+                return None
             return self.carousel.get_selected_game(filtered)
         return None
 

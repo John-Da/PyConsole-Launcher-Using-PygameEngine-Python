@@ -1,24 +1,63 @@
 import os
 import math
 import sys
-
 import pygame
 
 from utils.helpers import terminate
 
 
+_rect_cache = {}
+
+_QUALITY_SCALE = {
+    "low": 1,
+    "medium": 2,
+    "high": 3,
+}
+
+
 # ======= Custom Rounded Buttons ================
-def draw_round_rect(surf, color, rect, radius=10, border=0):
-    if rect.width <= 0 or rect.height <= 0: return
-    pygame.draw.rect(surf, color, rect, border, border_radius=radius)
+def draw_round_rect(surf, color, rect, radius=10, border=0, quality="medium"):
+    if rect.width <= 0 or rect.height <= 0:
+        return
+
+    scale = _QUALITY_SCALE.get(quality, 2)
+
+    if scale == 1:
+        pygame.draw.rect(surf, color, rect, border, border_radius=radius)
+        return
+
+    key = (color, rect.width, rect.height, radius, border, scale)
+    cached = _rect_cache.get(key)
+
+    if cached is None:
+        big = pygame.Surface((rect.width * scale, rect.height * scale), pygame.SRCALPHA)
+        pygame.draw.rect(
+            big,
+            color,
+            big.get_rect(),
+            border * scale if border else 0,
+            border_radius=radius * scale,
+        )
+        cached = pygame.transform.smoothscale(big, rect.size)
+        _rect_cache[key] = cached
+
+    surf.blit(cached, rect.topleft)
+
+
+def clear_rect_cache():
+    """Call when theme changes to drop stale cached colors."""
+    _rect_cache.clear()
 
 
 # ======= Custom Console Buttons ================
-def draw_console_btn(surf, text, rect, focused, fontstyle, theme, radius=10):
+def draw_console_btn(
+    surf, text, rect, focused, fontstyle, theme, radius=10, quality="medium"
+):
     bg = theme["accent"] if focused else theme["header"]
     txt_color = theme["bg"] if focused else theme["text"]
-    draw_round_rect(surf, bg, rect, radius)
-    if not focused: draw_round_rect(surf, theme["accent"], rect, radius, 2)
+    draw_round_rect(surf, bg, rect, radius, quality=quality)
+    if not focused:
+        draw_round_rect(surf, theme["accent"], rect, radius, 2, quality=quality)
     t_surf = fontstyle.render(text.upper(), True, txt_color)
     surf.blit(t_surf, t_surf.get_rect(center=rect.center))
 
@@ -146,13 +185,14 @@ def draw_loading_screen(screen, clock, fontstyle, theme, text="LOADING", logo=No
         bar_x, bar_y = cx - bar_w // 2, bar_y_anchor + 30
 
         draw_round_rect(
-            screen, theme["header"], pygame.Rect(bar_x, bar_y, bar_w, bar_h), 4
+            screen, theme["header"], pygame.Rect(bar_x, bar_y, bar_w, bar_h), 4, quality="medium"
         )
         draw_round_rect(
             screen,
             theme["accent"],
             pygame.Rect(bar_x, bar_y, int(bar_w * progress), bar_h),
             4,
+            quality="medium",
         )
 
         pygame.display.flip()

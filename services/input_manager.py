@@ -118,7 +118,7 @@ class InputManager:
 
             # CONTROLLER
             if event.type == pygame.JOYBUTTONDOWN:
-                
+
                 # print(f"Button pressed: {event.button}")
 
                 self.last_input = "controller"
