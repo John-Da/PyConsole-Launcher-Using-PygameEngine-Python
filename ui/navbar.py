@@ -1,6 +1,4 @@
 import pygame
-import os
-import math
 import time
 
 try:
@@ -10,7 +8,6 @@ try:
 except ImportError:
     _HAS_PSUTIL = False
 
-from ui.components import draw_round_rect
 from ui.logo import AnimatedLogo
 
 TAB_GAMES = "games"
@@ -91,22 +88,47 @@ class NavBar:
         if _HAS_PSUTIL:
             try:
                 b = psutil.sensors_battery()
-                self._battery_pct = int(b.percent)
-                self._battery_charging = b.power_plugged
+
+                if b is not None:
+                    self._battery_pct = int(b.percent)
+                    self._battery_charging = b.power_plugged
+                else:
+                    self._battery_pct = None
+                    self._battery_charging = False
+
             except Exception:
                 self._battery_pct = None
+                self._battery_charging = False
 
             try:
                 stats = psutil.net_if_stats()
-                wlan = next(
-                    (
-                        v
-                        for k, v in stats.items()
-                        if k.startswith("wl") or k in ("en0", "en1")
-                    ),
-                    None,
+
+                wifi_names = (
+                    "Wi-Fi",
+                    "WLAN",
+                    "wlan0",
+                    "wlan1",
+                    "en0",
+                    "en1",
                 )
-                self._wifi_strength = 4 if (wlan and wlan.isup) else 0
+
+                wifi_up = False
+
+                for name, stat in stats.items():
+                    lower_name = name.lower()
+
+                    if (
+                        lower_name.startswith("wl")
+                        or name in wifi_names
+                        or "wifi" in lower_name
+                        or "wireless" in lower_name
+                    ):
+                        if stat.isup:
+                            wifi_up = True
+                            break
+
+                self._wifi_strength = 4 if wifi_up else 0
+
             except Exception:
                 self._wifi_strength = None
 
@@ -221,9 +243,16 @@ class NavBar:
         screen.blit(wifi_surf, wifi_surf.get_rect(midleft=(x, cy)))
         x -= self.STATUS_GAP
 
-        BAT_TOTAL_W = 22 + 3
-        x -= BAT_TOTAL_W
-        bat_cx = x + BAT_TOTAL_W // 2
-        self._draw_battery(
-            screen, icon_color, bat_cx, cy, self._battery_pct, self._battery_charging
-        )
+        if self._battery_pct is not None:
+            BAT_TOTAL_W = 25
+            x -= BAT_TOTAL_W
+            bat_cx = x + BAT_TOTAL_W // 2
+
+            self._draw_battery(
+                screen,
+                icon_color,
+                bat_cx,
+                cy,
+                self._battery_pct,
+                self._battery_charging,
+            )
