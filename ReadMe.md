@@ -68,4 +68,7 @@ Your Game → Pygame Console Runtime → Hardware
 - Sample games — original works by the author
 
 
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](https://github.com/John-Da/PyConsole-Launcher-Using-PygameEngine-Python/blob/main/LICENSE) file for details.
 
