@@ -224,15 +224,15 @@ class InfoPanel:
         field_y = self._draw_field(
             screen, theme, text_x, field_y, "Size", game.get("size", "—"), text_w
         )
-        field_y = self._draw_field(
-            screen,
-            theme,
-            text_x,
-            field_y,
-            "Entry",
-            game.get("entry", "main.py"),
-            text_w,
-        )
+        # field_y = self._draw_field(
+        #     screen,
+        #     theme,
+        #     text_x,
+        #     field_y,
+        #     "Entry",
+        #     game.get("entry", "main.py"),
+        #     text_w,
+        # )
 
         field_y += 8
 

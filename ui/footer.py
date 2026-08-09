@@ -40,10 +40,62 @@ class Footer:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _hint_width(self, label: str) -> int:
+    # def _hint_width(self, label: str) -> int:
+    #     """Total pixel width of one [X] Label group."""
+    #     label_surf = self.font_label.render(label, True, (0, 0, 0))
+    #     return self.BADGE_W + self.HINT_GAP + label_surf.get_width()
+
+    # def _draw_hint(
+    #     self,
+    #     screen,
+    #     theme: dict,
+    #     x: int,
+    #     cy: int,
+    #     letter: str,
+    #     label: str,
+    #     badge_color=None,
+    #     letter_color=None,
+    # ) -> int:
+    #     """
+    #     Draws [letter] label centred vertically on cy.
+    #     Returns x right after the rendered group.
+    #     """
+    #     badge_color = badge_color or theme["accent"]
+    #     letter_color = letter_color or theme["bg"]
+
+    #     badge_rect = pygame.Rect(x, cy - self.BADGE_H // 2, self.BADGE_W, self.BADGE_H)
+    #     draw_round_rect(screen, badge_color, badge_rect, self.BADGE_RADIUS)
+
+    #     l_surf = self.font_badge.render(letter, True, letter_color)
+    #     screen.blit(l_surf, l_surf.get_rect(center=badge_rect.center))
+
+    #     lbl_surf = self.font_label.render(label, True, theme["text"])
+    #     screen.blit(
+    #         lbl_surf,
+    #         (badge_rect.right + self.HINT_GAP, cy - lbl_surf.get_height() // 2),
+    #     )
+
+    #     return badge_rect.right + self.HINT_GAP + lbl_surf.get_width()
+
+    # def _group_width(self, hints: list[tuple[str, str]]) -> int:
+    #     """Total width of a list of (letter, label) hints with spacing between them."""
+    #     total = 0
+    #     for i, (letter, label) in enumerate(hints):
+    #         total += self._hint_width(label)
+    #         if i < len(hints) - 1:
+    #             total += self.HINT_SPACING
+    #     return total
+
+    def _badge_width(self, letter: str) -> int:
+        """Badge width: fixed BADGE_W, but grows to fit wider letter text (e.g. 'L/R')."""
+        letter_surf = self.font_badge.render(letter, True, (0, 0, 0))
+        padding = 8  # min horizontal breathing room inside the badge
+        return max(self.BADGE_W, letter_surf.get_width() + padding)
+
+    def _hint_width(self, letter: str, label: str) -> int:
         """Total pixel width of one [X] Label group."""
         label_surf = self.font_label.render(label, True, (0, 0, 0))
-        return self.BADGE_W + self.HINT_GAP + label_surf.get_width()
+        return self._badge_width(letter) + self.HINT_GAP + label_surf.get_width()
 
     def _draw_hint(
         self,
@@ -56,14 +108,11 @@ class Footer:
         badge_color=None,
         letter_color=None,
     ) -> int:
-        """
-        Draws [letter] label centred vertically on cy.
-        Returns x right after the rendered group.
-        """
         badge_color = badge_color or theme["accent"]
         letter_color = letter_color or theme["bg"]
 
-        badge_rect = pygame.Rect(x, cy - self.BADGE_H // 2, self.BADGE_W, self.BADGE_H)
+        badge_w = self._badge_width(letter)
+        badge_rect = pygame.Rect(x, cy - self.BADGE_H // 2, badge_w, self.BADGE_H)
         draw_round_rect(screen, badge_color, badge_rect, self.BADGE_RADIUS)
 
         l_surf = self.font_badge.render(letter, True, letter_color)
@@ -81,7 +130,7 @@ class Footer:
         """Total width of a list of (letter, label) hints with spacing between them."""
         total = 0
         for i, (letter, label) in enumerate(hints):
-            total += self._hint_width(label)
+            total += self._hint_width(letter, label)
             if i < len(hints) - 1:
                 total += self.HINT_SPACING
         return total
@@ -103,15 +152,15 @@ class Footer:
         # ------------------------------------------------------------------
         # LEFT — [L] Change Category
         # ------------------------------------------------------------------
-        self._draw_hint(screen, theme, self.SIDE_PAD, cy, "L", "Change Category")
+        self._draw_hint(screen, theme, self.SIDE_PAD, cy, "L/R", "Tabs")
 
         # ------------------------------------------------------------------
         # RIGHT — [R] Change Category  (right-aligned)
         # ------------------------------------------------------------------
-        r_w = self._hint_width("Change Category")
-        self._draw_hint(
-            screen, theme, W - self.SIDE_PAD - r_w, cy, "R", "Change Category"
-        )
+        # r_w = self._hint_width("Change Category")
+        # self._draw_hint(
+        #     screen, theme, W - self.SIDE_PAD - r_w, cy, "R", "Change Category"
+        # )
 
         # ------------------------------------------------------------------
         # CENTRE — [A] Confirm  [X] Detail  [B] Back

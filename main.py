@@ -26,7 +26,6 @@ from ui.navbar import NavBar, TAB_GAMES, TAB_STORE, TAB_SETTINGS, TABS
 from ui.widgets import Widgets
 from ui.logo import AnimatedLogo
 
-
 import time
 
 _t_start = time.time()
@@ -63,7 +62,8 @@ _checkpoint("config + joysticks")
 
 
 WIDTH, HEIGHT = 800, 480
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED | pygame.FULLSCREEN)
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+# screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED | pygame.FULLSCREEN)
 pygame.display.set_caption(f"{APP_NAME} {APP_VERSION}")
 clock = pygame.time.Clock()
 
