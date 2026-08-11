@@ -21,3 +21,5 @@ mainV1.0.7.py
 main.spec
 Pyconsole.spec
 Pyconsole.dmg
+
+games/*.pyg

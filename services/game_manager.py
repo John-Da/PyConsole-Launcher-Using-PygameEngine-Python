@@ -38,7 +38,7 @@ class GameManager:
         if not os.path.exists(self.library_folder):
             return loaded
         for filename in os.listdir(self.library_folder):
-            if filename.endswith((".pgame", ".pygame", ".pgp", ".pypkg", ".pyg")):
+            if filename.endswith((".pyg")):
                 p = os.path.join(self.library_folder, filename)
                 if self._is_pyg1(p):
                     game = self._load_game_pyg(p, filename)
