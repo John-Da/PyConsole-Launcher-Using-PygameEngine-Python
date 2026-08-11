@@ -195,8 +195,9 @@ class InfoPanel:
             badge_w = genre_surf.get_width() + 20
             badge_h = genre_surf.get_height() + 8
             badge_rect = pygame.Rect(
-                text_x + title_surf.get_width() + 14, content_y + 4, badge_w, badge_h
+                text_x + title_surf.get_width() + 14, 0, badge_w, badge_h
             )
+            badge_rect.centery = content_y + title_surf.get_height() // 2
             draw_round_rect(screen, theme["accent"], badge_rect, badge_h // 2)
             screen.blit(genre_surf, genre_surf.get_rect(center=badge_rect.center))
 

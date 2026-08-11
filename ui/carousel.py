@@ -5,6 +5,7 @@ from ui.components import draw_round_rect
 class Carousel:
     """
     PS Vita-style horizontal game carousel.
+
     - Center item is large and fully opaque.
     - Side items shrink and fade out the further they are from center.
     - Only the centered item shows its title (below the thumbnail).
@@ -70,18 +71,25 @@ class Carousel:
     def _normalize_offsets(self, num_items: int):
         """
         Keep _scroll_offset/_target_offset from drifting to large magnitudes
-        after many LEFT/RIGHT presses over a long session. Only safe to do
-        while both are equal (i.e. not mid-animation), since shifting both
-        by the same multiple of num_items doesn't change their difference
-        (the animation delta) or the shortest-path math in draw().
+        after many LEFT/RIGHT presses over a long session.
+
+        This is now pure float hygiene, not a correctness requirement: the
+        wraparound math in draw() uses true modulo, so it produces the right
+        on-screen result no matter how large the offsets get. This just
+        keeps the numbers small so they don't lose float precision over a
+        very long play session.
+
+        Safe to run any time (not just when idle): shifting both
+        _scroll_offset and _target_offset by the same multiple of num_items
+        doesn't change their difference (the animation delta), so it can't
+        disturb an in-progress lerp.
         """
         if num_items == 0:
             return
-        if abs(self._target_offset - self._scroll_offset) < 0.001:
-            shift = round(self._target_offset / num_items) * num_items
-            if shift:
-                self._target_offset -= shift
-                self._scroll_offset -= shift
+        shift = round(self._scroll_offset / num_items) * num_items
+        if shift:
+            self._target_offset -= shift
+            self._scroll_offset -= shift
 
     # ------------------------------------------------------------------
     # Update
@@ -113,10 +121,37 @@ class Carousel:
             t = min(dist - 1, self.MAX_VISIBLE_SIDE - 1)
             denom = max(self.MAX_VISIBLE_SIDE - 1, 1)
             size = int(self.SIDE_SIZE + (self.FAR_SIZE - self.SIDE_SIZE) * (t / denom))
+
         # Fade out toward the edges
         alpha_t = min(dist / (self.MAX_VISIBLE_SIDE + 1), 1.0)
         alpha = int(255 * (1.0 - alpha_t * 0.85))  # never fully invisible until cutoff
         return max(size, 0), max(alpha, 0)
+
+    @staticmethod
+    def _shortest_signed_distance(
+        i: int, scroll_offset: float, num_items: int
+    ) -> float:
+        """
+        Shortest signed distance from `scroll_offset` to slot `i` on a
+        circular list of `num_items` slots.
+        Uses round-to-nearest-multiple-of-num_items rather than a
+        modulo + fixed-offset fold. That distinction only shows up for
+        even-sized lists: with a "(raw_dist + half) % num_items - half"
+        fold, an item exactly num_items/2 away always resolves to the
+        SAME side (-half), no matter which direction you navigated to
+        reach it. With exactly 2 items that pinned the "other" item to
+        one fixed side permanently instead of letting it slide to
+        whichever side it's actually animating from/to. Rounding instead
+        breaks the tie using the sign of the raw distance, so it stays
+        correct (and continuous through the lerp) in both directions.
+        Also still robust to scroll_offset having drifted arbitrarily far
+        from [0, num_items), same as the old modulo approach was.
+        """
+        raw_dist = i - scroll_offset
+        if num_items <= 0:
+            return raw_dist
+        raw_dist -= num_items * round(raw_dist / num_items)
+        return raw_dist
 
     def draw(self, screen, theme: dict, games: list[dict], rect: pygame.Rect):
         """
@@ -145,25 +180,29 @@ class Carousel:
         screen.blit(counter_surf, counter_surf.get_rect(centerx=cx, y=counter_y))
 
         for i, game in enumerate(games):
-            # Shortest signed distance on a circular list (so wrap-around looks continuous)
-            raw_dist = i - self._scroll_offset
-            if raw_dist > num_items / 2:
-                raw_dist -= num_items
-            elif raw_dist < -num_items / 2:
-                raw_dist += num_items
+            # Shortest signed distance on a circular list (so wrap-around
+            # looks continuous even if _scroll_offset has drifted far
+            # outside [0, num_items) between normalization passes).
+            raw_dist = self._shortest_signed_distance(i, self._scroll_offset, num_items)
+
             size, alpha = self._size_and_alpha_for_distance(raw_dist)
             if size <= 0 or alpha <= 0:
                 continue
+
             x = cx + raw_dist * (self.CENTER_SIZE + self.ITEM_GAP)
             y = cy
             item_rect = pygame.Rect(0, 0, size, size)
             item_rect.center = (int(x), int(y))
+
             # Skip items fully off-screen
             if item_rect.right < rect.left - 50 or item_rect.left > rect.right + 50:
                 continue
+
             is_center = abs(raw_dist) < 0.05
+
             # --- Thumbnail surface (with alpha) ---
             thumb_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+
             # Background card
             card_color = (*theme["header"][:3], alpha)
             draw_round_rect(
@@ -172,6 +211,7 @@ class Carousel:
                 pygame.Rect(0, 0, size, size),
                 self.CORNER_RADIUS,
             )
+
             # Icon
             icon = game.get("icon")
             if icon:
@@ -180,12 +220,14 @@ class Carousel:
                 scaled_icon = pygame.transform.smoothscale(icon, (icon_size, icon_size))
                 scaled_icon.set_alpha(alpha)
                 thumb_surf.blit(scaled_icon, (pad, pad))
+
             # Accent border for the centered item
             if is_center:
                 border_rect = pygame.Rect(0, 0, size, size)
                 draw_round_rect(
                     thumb_surf, theme["accent"], border_rect, self.CORNER_RADIUS, 4
                 )
+
             screen.blit(thumb_surf, item_rect.topleft)
 
         # ------------------------------------------------------------------

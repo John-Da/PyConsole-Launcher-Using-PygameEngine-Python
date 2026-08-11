@@ -33,7 +33,7 @@ _t_start = time.time()
 
 def _checkpoint(label):
     elapsed = time.time() - _t_start
-    print(f"[STARTUP] {label}: {elapsed:.3f}s")
+    # print(f"[STARTUP] {label}: {elapsed:.3f}s")
 
 
 pygame.init()

@@ -1,231 +1,119 @@
-# How to Make Games (`.pgame`)
+# Game Project Structure & Release (`.pyg`)
 
-`.pgame` is the official game package format for **Pygame Console APP**.
-It is designed to standardize how games are structured, discovered, launched, and managed inside the console runtime.
-
-Instead of running raw Python scripts, games are wrapped into a `.pgame` package that contains:
-
-- Game source code
-- Assets (images, audio, fonts)
-- Metadata
-- Entry configuration
-
-This ensures every game follows the same structure and works seamlessly with the console.
+`.pyg` is the official game package format for **PyConsole**. Games are no longer released by zipping a folder and renaming the extension — they're built into a real binary package using the `pyg` CLI (`pygpack` on PyPI).
 
 ---
 
-## 📦 What is a `.pgame` File?
+## 📁 Project Structure
 
-A `.pgame` file is simply a structured zip package with a custom extension.
-Internally, it contains:
+Before building, your game just needs to exist as a normal folder on disk:
 
 ```
-my_game.pgame
-│
+my_game/
+├── meta.json
 ├── main.py
-├── manifest.json
 ├── icon.png
-├── /assets
-│   ├── sprites/
-│   ├── sounds/
-│   └── fonts/
+└── assets/
+    ├── sprites/
+    ├── sounds/
+    └── fonts/
 ```
 
-> You can rename `.pgame` to `.zip` to inspect its contents.
+There's no required folder layout beyond that — everything under `my_game/` gets packaged as-is, so organize `assets/` however makes sense for your game. The only two files with special meaning are `meta.json` (becomes the package's metadata, not a regular packaged file) and whatever your `entry` field points to.
 
----
-
-## 📄 Required Files
-
-### 1️⃣ `main.py`
-
-This is the entry point of your game.
-
-**Requirements:**
-- Must contain a `create_game()` function
-- Must return control back to console properly when exiting
-- Should not call `sys.exit()` directly
-
-**Example:**
-
-```python
-def create_game(screen):
-    running = True
-
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-        screen.fill((0, 0, 0))
-        pygame.display.flip()
-        clock.tick(60)
-```
-
-The console runtime will import and execute this function.
-
----
-
-### 2️⃣ `manifest.json`
-
-This file defines game metadata used by the console.
-
-**Example:**
+### `meta.json`
 
 ```json
 {
     "name": "My First Game",
-    "author": "Your Name",
+    "id": "com.example.myfirstgame",
     "version": "1.0.0",
-    "description": "A simple demo game for Pygame Console.",
+    "author": "Your Name",
     "entry": "main.py",
     "icon": "icon.png"
 }
 ```
 
-**Required Fields:**
+| Field | Required | Notes |
+|-------|----------|-------|
+| `name` | ✅ | Display name shown in the console |
+| `id` | ✅ | Unique, reverse-DNS style by convention (e.g. `com.you.gamename`) |
+| `entry` | ✅ | Path to the entry Python file; must exist in the project after build |
+| `version`, `author`, `icon`, ... | optional | Free-form — unknown keys are kept, not stripped |
 
-| Field | Description |
-|-------|-------------|
-| `name` | Display name in console |
-| `author` | Developer name |
-| `version` | Game version |
-| `entry` | Entry Python file |
-| `icon` | Thumbnail shown in library |
+### `main.py` (entry point)
 
----
-
-## 🎮 Game API (Console Runtime Integration)
-
-When your game runs, it receives:
-
-```python
-create_game(screen)
-```
-
-Where:
-- `screen` → The main pygame surface managed by console
-
-This ensures:
-- Resolution consistency
-- Performance control
-- Proper return to home screen
+Same contract as before — `create_game(screen)` is what the console runtime calls, and games should hand control back cleanly (`return "QUIT_TO_CONSOLE"`) instead of calling `sys.exit()`.
 
 ---
 
-## 🔄 Exiting the Game Properly
+## 🚀 Releasing / Exporting a Game
 
-To exit back to console:
+Exporting is no longer "zip it, rename it." You build a real `.pyg` package with the `pyg` CLI.
 
-```python
-running = False
-return "QUIT_TO_CONSOLE"
-```
-
-**Do NOT use:**
-
-```python
-sys.exit()
-pygame.quit()
-```
-
-> The console manages the pygame lifecycle globally.
-
----
-
-## 🖼 Icon Guidelines
-
-- Recommended size: **256x256 px**
-- Format: **PNG**
-- Transparent background supported
-- Keep design clean and readable
-
-The icon will be shown in:
-- Grid layout
-- List layout
-- Game details view
-
----
-
-## 📁 Development Workflow
-
-### Step 1 — Create Game Folder
-
-```
-my_game/
-    main.py
-    manifest.json
-    icon.png
-    assets/
-```
-
-### Step 2 — Test in Development Mode
-
-You can run:
+### 1. Install the tool
 
 ```bash
-python main.py
+pip install pygpack
 ```
 
-Or test inside the console runtime.
-
-### Step 3 — Package to `.pgame`
-
-Compress the folder as zip:
+### 2. Build
 
 ```bash
-zip -r my_game.zip my_game/
+pyg build my_game/                   # writes my_game.pyg next to the project folder
+pyg build my_game/ -o dist/game.pyg  # or choose an explicit output path
 ```
 
-Rename:
+This reads `meta.json`, packages every other file in the folder, and produces a single binary `.pyg` file (the current **PYG1** format). Unlike the old zip-based approach, you can no longer just rename a `.pyg` to `.zip` and open it — the file is a proper binary container with its own header, metadata block, file table, and data region.
 
-```
-my_game.zip → my_game.pgame
+Optional: ship compiled bytecode instead of raw source —
+
+```bash
+pyg build my_game/ --compile   # packages .pyc instead of .py; meta.json's entry is updated automatically
 ```
 
-Move it into:
+This is casual source hiding (raises the bar past "open in a text editor"), not real protection — a determined person can still decompile it. Don't rely on it for anything sensitive.
+
+### 3. Verify before shipping
+
+```bash
+pyg validate my_game.pyg   # runs full structural + checksum validation, pass/fail report
+pyg info my_game.pyg       # prints the manifest
+pyg list my_game.pyg       # lists every packaged file
+```
+
+Always run `pyg validate` before distributing — it checks header integrity, file table consistency, path safety, and per-file checksums in one pass.
+
+### 4. Test it runs
+
+```bash
+pyg run my_game.pyg
+```
+
+This extracts the package to a temporary runtime directory, launches your entry point with `cwd` set there (so relative asset paths like `assets/player.png` resolve exactly like they would unpackaged), and cleans up afterward. Use `--keep-temp` if you need to inspect the extracted files while debugging.
+
+### 5. Distribute
+
+Move the resulting `.pyg` file into:
 
 ```
 /games/
 ```
 
-> The console will automatically detect it.
+The console will detect and list it automatically — same as before, just with a real package format underneath instead of a renamed zip.
 
 ---
 
-## 🧠 Advanced Features (Planned)
+## Summary of the workflow
 
-Future `.pgame` capabilities may include:
-
-- Save data folder isolation
-- Permission system
-- Achievement hooks
-- Network API access
-- Sandboxed execution
-- Plugin integration
-- Performance profiling
-
----
-
-## 🛡 Security Considerations (Planned)
-
-In future versions:
-
-- Games may run in a restricted execution environment
-- Limited system access
-- Safe error handling
-- Crash isolation
-
----
-
-## 🎯 Design Philosophy
-
-`.pgame` exists to:
-
-- Standardize pygame game structure
-- Make installation simple (drag & drop)
-- Create a console-like ecosystem
-- Encourage cleaner architecture
-- Prepare pygame for embedded handheld systems
-
-> It transforms pygame from "just scripts" into a platform-ready game format.
+```
+my_game/ (source folder)
+      │
+      │  pyg build my_game/
+      ▼
+my_game.pyg (single binary package)
+      │
+      │  pyg validate → pyg run (test)
+      ▼
+copy into /games/
+```
