@@ -1,57 +1,103 @@
-# Game Project Structure & Release (`.pyg`)
+# How to Make the Game — Project Structure & Release
 
-`.pyg` is the official game package format for **PyConsole**. Games are no longer released by zipping a folder and renaming the extension — they're built into a real binary package using the `pyg` CLI (`pygpack` on PyPI).
+This guide covers two things: how a game project should be structured, and
+how to release it as a `.pyg` package for the console.
 
 ---
 
 ## 📁 Project Structure
 
-Before building, your game just needs to exist as a normal folder on disk:
-
 ```
 my_game/
-├── meta.json
 ├── main.py
-├── icon.png
+├── meta.json
+├── icon.png            # OR use an icons/ folder instead — see below
 └── assets/
     ├── sprites/
     ├── sounds/
     └── fonts/
 ```
 
-There's no required folder layout beyond that — everything under `my_game/` gets packaged as-is, so organize `assets/` however makes sense for your game. The only two files with special meaning are `meta.json` (becomes the package's metadata, not a regular packaged file) and whatever your `entry` field points to.
-
-### `meta.json`
-
-```json
-{
-    "name": "My First Game",
-    "id": "com.example.myfirstgame",
-    "version": "1.0.0",
-    "author": "Your Name",
-    "entry": "main.py",
-    "icon": "icon.png"
-}
-```
-
-| Field | Required | Notes |
-|-------|----------|-------|
-| `name` | ✅ | Display name shown in the console |
-| `id` | ✅ | Unique, reverse-DNS style by convention (e.g. `com.you.gamename`) |
-| `entry` | ✅ | Path to the entry Python file; must exist in the project after build |
-| `version`, `author`, `icon`, ... | optional | Free-form — unknown keys are kept, not stripped |
-
-### `main.py` (entry point)
-
-Same contract as before — `create_game(screen)` is what the console runtime calls, and games should hand control back cleanly (`return "QUIT_TO_CONSOLE"`) instead of calling `sys.exit()`.
+- **`main.py`** — entry point. Must define `create_game(screen)`. Unrelated
+  to packaging — this doesn't change based on how the game is released.
+- **`meta.json`** — required. See schema below.
+- **`icon.png`** (or an `icons/` folder — see [Icon Placement](#icon-placement)) — shown in the console's grid/list/details views.
+- **`assets/`** — anything else your game needs: images, audio, fonts. Any
+  folder structure underneath is preserved as-is when packaged.
 
 ---
 
-## 🚀 Releasing / Exporting a Game
+## 📄 `meta.json`
 
-Exporting is no longer "zip it, rename it." You build a real `.pyg` package with the `pyg` CLI.
+```json
+{
+  "format": "pyg",
+  "format_version": 1,
+  "name": "Neon Striker",
+  "id": "com.example.neonstriker",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "description": "A fast-paced arcade shooter.",
+  "entry": "main.py",
+  "icon": "icon.png"
+}
+```
 
-### 1. Install the tool
+| Field | Required? | Description |
+|---|---|---|
+| `name` | **Yes** | Display name shown in the console |
+| `id` | **Yes** | Unique identifier, reverse-DNS style (e.g. `com.you.gamename`) |
+| `entry` | **Yes** | Entry Python file — must match your actual `main.py` (or whatever you name it) |
+| `format` | No | Defaults to `"pyg"` automatically if omitted |
+| `format_version` | No | Defaults to `1` automatically if omitted |
+| `version` | No | Your game's version string |
+| `author` | No | Developer/team name |
+| `description` | No | Shown in the game details view |
+| `icon` | No | Path to your icon file, if you're not relying on auto-detection (see below) |
+| `genre` | No | Shown in the game details view, if your console UI displays it |
+
+Unknown/extra fields beyond this list are preserved, not rejected — safe to
+add your own if a future feature needs one.
+
+---
+
+## Icon Placement
+
+Two layouts are both fully supported — pick whichever fits your project:
+
+**Option A — single file at the project root:**
+```
+my_game/
+├── icon.png
+```
+
+**Option B — an `icons/` folder**, useful if you keep multiple format
+variants together (e.g. a `.icns` for a Mac build elsewhere, alongside the
+`.png` the console actually uses):
+```
+my_game/
+├── icons/
+│   ├── icon.png
+│   ├── icon.icns
+│   └── icon.ico
+```
+
+The console automatically finds a usable icon in either location — you
+don't need to point `meta.json`'s `"icon"` field at it explicitly unless
+you want to override the auto-detected choice with a specific path.
+
+**Format requirements:** `.png`, `.jpg`/`.jpeg`, or `.bmp` only.
+`.icns`, `.ico`, `.svg`, and `.psd` are **not supported** — they're
+automatically skipped during detection rather than causing a crash, but a
+game that provides *only* one of these as its icon will show a blank
+placeholder instead of the real artwork. Recommended size: 256×256 px, PNG
+with transparency supported.
+
+---
+
+## 🚀 Releasing the Game
+
+### 1. Install the build tool (one-time)
 
 ```bash
 pip install pygpack
@@ -60,60 +106,31 @@ pip install pygpack
 ### 2. Build
 
 ```bash
-pyg build my_game/                   # writes my_game.pyg next to the project folder
-pyg build my_game/ -o dist/game.pyg  # or choose an explicit output path
+pyg build my_game/
 ```
 
-This reads `meta.json`, packages every other file in the folder, and produces a single binary `.pyg` file (the current **PYG1** format). Unlike the old zip-based approach, you can no longer just rename a `.pyg` to `.zip` and open it — the file is a proper binary container with its own header, metadata block, file table, and data region.
+Produces `my_game.pyg` next to the `my_game/` folder — a single binary file
+containing everything from the structure above.
 
-Optional: ship compiled bytecode instead of raw source —
+Optional: ship compiled bytecode instead of readable `.py` source —
 
 ```bash
-pyg build my_game/ --compile   # packages .pyc instead of .py; meta.json's entry is updated automatically
+pyg build my_game/ --compile
 ```
-
-This is casual source hiding (raises the bar past "open in a text editor"), not real protection — a determined person can still decompile it. Don't rely on it for anything sensitive.
 
 ### 3. Verify before shipping
 
 ```bash
-pyg validate my_game.pyg   # runs full structural + checksum validation, pass/fail report
-pyg info my_game.pyg       # prints the manifest
-pyg list my_game.pyg       # lists every packaged file
+pyg validate my_game.pyg   # package is well-formed
+pyg list my_game.pyg       # everything got packaged
+pyg info my_game.pyg       # metadata reads back correctly
+pyg run my_game.pyg        # actually launches, same as the console will
 ```
 
-Always run `pyg validate` before distributing — it checks header integrity, file table consistency, path safety, and per-file checksums in one pass.
+### 4. Distribute
 
-### 4. Test it runs
+Move `my_game.pyg` into the console's `/games/` folder. It's auto-detected
+— no extraction, no manual setup.
 
-```bash
-pyg run my_game.pyg
-```
-
-This extracts the package to a temporary runtime directory, launches your entry point with `cwd` set there (so relative asset paths like `assets/player.png` resolve exactly like they would unpackaged), and cleans up afterward. Use `--keep-temp` if you need to inspect the extracted files while debugging.
-
-### 5. Distribute
-
-Move the resulting `.pyg` file into:
-
-```
-/games/
-```
-
-The console will detect and list it automatically — same as before, just with a real package format underneath instead of a renamed zip.
-
----
-
-## Summary of the workflow
-
-```
-my_game/ (source folder)
-      │
-      │  pyg build my_game/
-      ▼
-my_game.pyg (single binary package)
-      │
-      │  pyg validate → pyg run (test)
-      ▼
-copy into /games/
-```
+That single `.pyg` file is the whole release artifact — nothing else needs
+to accompany it.
