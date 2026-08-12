@@ -102,6 +102,7 @@ with transparency supported.
 ```bash
 pip install pygpack
 ```
+> 📦 For more information, see the [pygpack package on PyPI](https://pypi.org/project/pygpack/)
 
 ### 2. Build
 
